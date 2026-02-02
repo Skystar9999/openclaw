@@ -202,6 +202,7 @@ class SmsWebSocketServer(
     private inner class SmsBroadcastReceiver(
         private val onSmsReceived: (from: String, body: String, timestamp: Long) -> Unit
     ) : BroadcastReceiver() {
+        @Suppress("DEPRECATION")
         override fun onReceive(context: Context, intent: Intent) {
             if (intent.action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION) {
                 val bundle = intent.extras
