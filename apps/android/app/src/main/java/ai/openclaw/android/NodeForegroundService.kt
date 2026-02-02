@@ -98,14 +98,10 @@ class NodeForegroundService : Service() {
         port = 8888, // SMS Gateway pe port 8888
         apiKey = BuildConfig.SMS_GATEWAY_API_KEY ?: "development-key-change-in-production"
       )
-      val started = smsGateway?.start() ?: false
-      if (started) {
-        val httpUrl = smsGateway?.getUrl()
-        val wsUrl = smsGateway?.getWebSocketUrl()
-        android.util.Log.i("NodeForegroundService", "SMS Gateway started: HTTP=$httpUrl, WS=$wsUrl")
-      } else {
-        android.util.Log.e("NodeForegroundService", "Failed to start SMS Gateway")
-      }
+      smsGateway?.start()
+      val httpUrl = smsGateway?.getUrl()
+      val wsUrl = smsGateway?.getWebSocketUrl()
+      android.util.Log.i("NodeForegroundService", "SMS Gateway started: HTTP=$httpUrl, WS=$wsUrl")
     } catch (e: Exception) {
       android.util.Log.e("NodeForegroundService", "Error starting SMS Gateway: ${e.message}")
     }

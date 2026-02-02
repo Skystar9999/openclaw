@@ -81,7 +81,7 @@ class SmsWebSocketServer(
     /**
      * Verifică dacă serverul rulează
      */
-    fun isRunning(): Boolean = server?.isRunning ?: false
+    fun isRunning(): Boolean = server != null
     
     /**
      * Returnează URL-ul WebSocket
