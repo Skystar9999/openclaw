@@ -19,18 +19,23 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import ai.openclaw.android.sms.SmsGatewayServer
 
 class NodeForegroundService : Service() {
   private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
   private var notificationJob: Job? = null
   private var lastRequiresMic = false
   private var didStartForeground = false
+  private var smsGateway: SmsGatewayServer? = null
 
   override fun onCreate() {
     super.onCreate()
     ensureChannel()
     val initial = buildNotification(title = "OpenClaw Node", text = "Starting…")
     startForegroundWithTypes(notification = initial, requiresMic = false)
+
+    // Start SMS Gateway Server
+    startSmsGateway()
 
     val runtime = (application as NodeApp).runtime
     notificationJob =
@@ -78,10 +83,31 @@ class NodeForegroundService : Service() {
   override fun onDestroy() {
     notificationJob?.cancel()
     scope.cancel()
+    // Stop SMS Gateway
+    smsGateway?.stop()
+    smsGateway = null
     super.onDestroy()
   }
 
   override fun onBind(intent: Intent?) = null
+
+  private fun startSmsGateway() {
+    try {
+      smsGateway = SmsGatewayServer(
+        context = this,
+        port = 8888, // SMS Gateway pe port 8888
+        apiKey = BuildConfig.SMS_GATEWAY_API_KEY ?: "development-key-change-in-production"
+      )
+      val started = smsGateway?.start() ?: false
+      if (started) {
+        android.util.Log.i("NodeForegroundService", "SMS Gateway started on port 8888")
+      } else {
+        android.util.Log.e("NodeForegroundService", "Failed to start SMS Gateway")
+      }
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error starting SMS Gateway: ${e.message}")
+    }
+  }
 
   private fun ensureChannel() {
     val mgr = getSystemService(NotificationManager::class.java)

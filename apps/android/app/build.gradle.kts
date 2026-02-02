@@ -23,6 +23,9 @@ android {
     targetSdk = 36
     versionCode = 202602010
     versionName = "2026.2.1"
+    
+    // SMS Gateway API Key - poate fi suprascrisă via environment variable
+    buildConfigField("String", "SMS_GATEWAY_API_KEY", "\"${System.getenv("SMS_GATEWAY_API_KEY") ?: "dev-key-change-me"}\"")
   }
 
   buildTypes {
