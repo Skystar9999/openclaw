@@ -36,7 +36,7 @@ GET /sms/status
 
 ### 2. Listă Inbox
 ```http
-GET /sms/inbox?limit=20&unread=false&from=+4077
+GET /sms/inbox?limit=20&unread=false&from=+4070
 ```
 
 **Query Parameters:**
@@ -51,7 +51,7 @@ GET /sms/inbox?limit=20&unread=false&from=+4077
     {
       "id": "123",
       "threadId": "456",
-      "address": "+40773746621",
+      "address": "+40700000000",
       "body": "Salut!",
       "date": 1738525200000,
       "dateFormatted": "2025-02-02 20:00:00",
@@ -75,7 +75,7 @@ GET /sms/inbox/{id}
 {
   "id": "123",
   "threadId": "456",
-  "address": "+40773746621",
+  "address": "+40700000000",
   "body": "Salut!",
   "date": 1738525200000,
   "dateFormatted": "2025-02-02 20:00:00",
@@ -91,7 +91,7 @@ Content-Type: application/json
 X-API-Key: your-api-key
 
 {
-  "to": "+40773746621",
+  "to": "+40700000000",
   "message": "Salut de la Aghiuță! 🦞"
 }
 ```
@@ -158,7 +158,7 @@ ws.onmessage = (event) => {
   "type": "sms:received",
   "data": {
     "id": "123",
-    "from": "+40773746621",
+    "from": "+40700000000",
     "body": "Mesaj nou!",
     "timestamp": "1738525200000"
   },
@@ -171,7 +171,7 @@ ws.onmessage = (event) => {
 {
   "type": "sms:sent",
   "data": {
-    "to": "+40773746621",
+    "to": "+40700000000",
     "body": "Mesaj trimis!",
     "success": "true",
     "timestamp": "1738525200000"
@@ -259,7 +259,7 @@ curl "http://192.168.100.103:8888/sms/inbox?unread=true" \
 curl -X POST http://192.168.100.103:8888/sms/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: dev-key-change-me" \
-  -d '{"to":"+40773746621","message":"Test 🦞"}'
+  -d '{"to":"+40700000000","message":"Test 🦞"}'
 
 # Marchează citit
 curl -X POST http://192.168.100.103:8888/sms/inbox/123/read \
@@ -282,7 +282,7 @@ headers = {"X-API-Key": API_KEY}
 response = requests.post(
     f"{BASE_URL}/sms/send",
     headers={**headers, "Content-Type": "application/json"},
-    json={"to": "+40773746621", "message": "Salut!"}
+    json={"to": "+40700000000", "message": "Salut!"}
 )
 print(response.json())
 

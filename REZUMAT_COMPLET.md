@@ -130,7 +130,7 @@ implementation("org.java-websocket:Java-WebSocket:1.5.6")
 curl -X POST http://192.168.100.103:8888/sms/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: dev-key-change-me" \
-  -d '{"to":"+40773746621","message":"Salut! 🦞"}'
+  -d '{"to":"+40700000000","message":"Salut! 🦞"}'
 ```
 
 ### 2. Citește Inbox
@@ -140,7 +140,7 @@ curl "http://192.168.100.103:8888/sms/inbox?limit=10" \
   -H "X-API-Key: dev-key-change-me"
 
 # Doar necitite de la un număr
-curl "http://192.168.100.103:8888/sms/inbox?unread=true&from=+4077" \
+curl "http://192.168.100.103:8888/sms/inbox?unread=true&from=+4070" \
   -H "X-API-Key: dev-key-change-me"
 ```
 
@@ -166,7 +166,7 @@ HEADERS = {"X-API-Key": "dev-key-change-me"}
 # Trimite
 requests.post(f"{BASE}/sms/send", 
     headers=HEADERS,
-    json={"to": "+40773746621", "message": "Test"}
+    json={"to": "+40700000000", "message": "Test"}
 )
 
 # Citește inbox
