@@ -130,8 +130,7 @@ class NodeForegroundService : Service() {
     try {
       adbBridge = AdbBridgeServer(context = this, port = 8890)
       adbBridge?.start()
-      val url = adbBridge?.getUri()
-      android.util.Log.i("NodeForegroundService", "ADB Bridge started: $url")
+      android.util.Log.i("NodeForegroundService", "ADB Bridge started on port 8890")
     } catch (e: Exception) {
       android.util.Log.e("NodeForegroundService", "Error starting ADB Bridge: ${e.message}")
     }
@@ -150,8 +149,7 @@ class NodeForegroundService : Service() {
     try {
       systemMonitor = SystemMonitorServer(context = this, port = 8892)
       systemMonitor?.start()
-      val url = systemMonitor?.getUri()
-      android.util.Log.i("NodeForegroundService", "System Monitor started: $url")
+      android.util.Log.i("NodeForegroundService", "System Monitor started on port 8892")
     } catch (e: Exception) {
       android.util.Log.e("NodeForegroundService", "Error starting System Monitor: ${e.message}")
     }
