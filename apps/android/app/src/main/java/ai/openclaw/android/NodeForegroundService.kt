@@ -23,6 +23,10 @@ import ai.openclaw.android.sms.SmsGatewayServer
 import ai.openclaw.android.adb.AdbBridgeServer
 import ai.openclaw.android.call.VoiceCallManager
 import ai.openclaw.android.monitor.SystemMonitorServer
+import ai.openclaw.android.camera.CameraServer
+import ai.openclaw.android.files.FileManagerServer
+import ai.openclaw.android.homeassistant.HomeAssistantBridge
+import ai.openclaw.android.automation.AutomationEngine
 
 class NodeForegroundService : Service() {
   private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -33,6 +37,10 @@ class NodeForegroundService : Service() {
   private var adbBridge: AdbBridgeServer? = null
   private var voiceCallManager: VoiceCallManager? = null
   private var systemMonitor: SystemMonitorServer? = null
+  private var cameraServer: CameraServer? = null
+  private var fileManager: FileManagerServer? = null
+  private var homeAssistantBridge: HomeAssistantBridge? = null
+  private var automationEngine: AutomationEngine? = null
 
   override fun onCreate() {
     super.onCreate()
@@ -40,17 +48,15 @@ class NodeForegroundService : Service() {
     val initial = buildNotification(title = "OpenClaw Node", text = "Starting…")
     startForegroundWithTypes(notification = initial, requiresMic = false)
 
-    // Start SMS Gateway Server
+    // Start all services
     startSmsGateway()
-    
-    // Start ADB Bridge Server
     startAdbBridge()
-    
-    // Start System Monitor Server
     startSystemMonitor()
-    
-    // Initialize Voice Call Manager
     initVoiceCallManager()
+    startCameraServer()
+    startFileManager()
+    startHomeAssistantBridge()
+    startAutomationEngine()
 
     val runtime = (application as NodeApp).runtime
     notificationJob =
@@ -105,6 +111,14 @@ class NodeForegroundService : Service() {
     adbBridge = null
     systemMonitor?.stop()
     systemMonitor = null
+    cameraServer?.stop()
+    cameraServer = null
+    fileManager?.stop()
+    fileManager = null
+    homeAssistantBridge?.stop()
+    homeAssistantBridge = null
+    automationEngine?.stop()
+    automationEngine = null
     super.onDestroy()
   }
 
@@ -152,6 +166,46 @@ class NodeForegroundService : Service() {
       android.util.Log.i("NodeForegroundService", "System Monitor started on port 8892")
     } catch (e: Exception) {
       android.util.Log.e("NodeForegroundService", "Error starting System Monitor: ${e.message}")
+    }
+  }
+
+  private fun startCameraServer() {
+    try {
+      cameraServer = CameraServer(context = this, port = 8893)
+      cameraServer?.start()
+      android.util.Log.i("NodeForegroundService", "Camera Server started on port 8893")
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error starting Camera Server: ${e.message}")
+    }
+  }
+
+  private fun startFileManager() {
+    try {
+      fileManager = FileManagerServer(context = this, port = 8894)
+      fileManager?.start()
+      android.util.Log.i("NodeForegroundService", "File Manager started on port 8894")
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error starting File Manager: ${e.message}")
+    }
+  }
+
+  private fun startHomeAssistantBridge() {
+    try {
+      homeAssistantBridge = HomeAssistantBridge(context = this, port = 8895)
+      homeAssistantBridge?.start()
+      android.util.Log.i("NodeForegroundService", "Home Assistant Bridge started on port 8895")
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error starting Home Assistant Bridge: ${e.message}")
+    }
+  }
+
+  private fun startAutomationEngine() {
+    try {
+      automationEngine = AutomationEngine(context = this, port = 8896)
+      automationEngine?.start()
+      android.util.Log.i("NodeForegroundService", "Automation Engine started on port 8896")
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error starting Automation Engine: ${e.message}")
     }
   }
 
