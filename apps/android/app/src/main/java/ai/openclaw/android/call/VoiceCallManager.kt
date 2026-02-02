@@ -43,6 +43,7 @@ class VoiceCallManager(private val context: Context) {
     /**
      * Verifică dacă există apel activ
      */
+    @Suppress("DEPRECATION")
     fun hasActiveCall(): Boolean {
         return telephonyManager?.callState != TelephonyManager.CALL_STATE_IDLE
     }
@@ -50,6 +51,7 @@ class VoiceCallManager(private val context: Context) {
     /**
      * Obține status apel curent
      */
+    @Suppress("DEPRECATION")
     fun getCallState(): String {
         return when (telephonyManager?.callState) {
             TelephonyManager.CALL_STATE_IDLE -> "idle"

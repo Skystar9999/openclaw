@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
  * Similar cu OpenClaw Mac /status și /monitor
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION")
 @Composable
 fun MonitorDashboard(
     modifier: Modifier = Modifier,

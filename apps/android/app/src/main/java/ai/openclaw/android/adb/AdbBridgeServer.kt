@@ -221,6 +221,7 @@ class AdbBridgeServer(
         }
     }
     
+    @Suppress("DEPRECATION")
     private fun handleScreenInfo(): Response {
         val display = context.resources.displayMetrics
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager

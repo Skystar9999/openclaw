@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  * - System Info (battery, storage, network)
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION")
 @Composable
 fun MissionControlDashboard(
     modifier: Modifier = Modifier,
@@ -117,7 +120,7 @@ private fun StatusOverviewCard(viewModel: MissionControlViewModel) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 StatusIndicator("Gateway", true, Icons.Default.Cloud)
-                StatusIndicator("SMS", true, Icons.Default.Message)
+                StatusIndicator("SMS", true, Icons.AutoMirrored.Filled.Message)
                 StatusIndicator("ADB", false, Icons.Default.Build)
                 StatusIndicator("Voice", false, Icons.Default.Call)
             }
@@ -167,7 +170,7 @@ private fun QuickActionsGrid(viewModel: MissionControlViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 QuickActionButton(
-                    icon = Icons.Default.Send,
+                    icon = Icons.AutoMirrored.Filled.Send,
                     label = "Send SMS",
                     onClick = { /* Open SMS Dialog */ },
                     modifier = Modifier.weight(1f)
