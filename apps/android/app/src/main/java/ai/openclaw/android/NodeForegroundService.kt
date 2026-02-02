@@ -20,6 +20,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import ai.openclaw.android.sms.SmsGatewayServer
+import ai.openclaw.android.adb.AdbBridgeServer
+import ai.openclaw.android.call.VoiceCallManager
+import ai.openclaw.android.monitor.SystemMonitorServer
 
 class NodeForegroundService : Service() {
   private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -27,6 +30,9 @@ class NodeForegroundService : Service() {
   private var lastRequiresMic = false
   private var didStartForeground = false
   private var smsGateway: SmsGatewayServer? = null
+  private var adbBridge: AdbBridgeServer? = null
+  private var voiceCallManager: VoiceCallManager? = null
+  private var systemMonitor: SystemMonitorServer? = null
 
   override fun onCreate() {
     super.onCreate()
@@ -36,6 +42,15 @@ class NodeForegroundService : Service() {
 
     // Start SMS Gateway Server
     startSmsGateway()
+    
+    // Start ADB Bridge Server
+    startAdbBridge()
+    
+    // Start System Monitor Server
+    startSystemMonitor()
+    
+    // Initialize Voice Call Manager
+    initVoiceCallManager()
 
     val runtime = (application as NodeApp).runtime
     notificationJob =
@@ -83,9 +98,13 @@ class NodeForegroundService : Service() {
   override fun onDestroy() {
     notificationJob?.cancel()
     scope.cancel()
-    // Stop SMS Gateway
+    // Stop all services
     smsGateway?.stop()
     smsGateway = null
+    adbBridge?.stop()
+    adbBridge = null
+    systemMonitor?.stop()
+    systemMonitor = null
     super.onDestroy()
   }
 
@@ -95,7 +114,7 @@ class NodeForegroundService : Service() {
     try {
       smsGateway = SmsGatewayServer(
         context = this,
-        port = 8888, // SMS Gateway pe port 8888
+        port = 8888,
         apiKey = BuildConfig.SMS_GATEWAY_API_KEY ?: "development-key-change-in-production"
       )
       smsGateway?.start()
@@ -104,6 +123,37 @@ class NodeForegroundService : Service() {
       android.util.Log.i("NodeForegroundService", "SMS Gateway started: HTTP=$httpUrl, WS=$wsUrl")
     } catch (e: Exception) {
       android.util.Log.e("NodeForegroundService", "Error starting SMS Gateway: ${e.message}")
+    }
+  }
+
+  private fun startAdbBridge() {
+    try {
+      adbBridge = AdbBridgeServer(context = this, port = 8890)
+      adbBridge?.start()
+      val url = adbBridge?.getUri()
+      android.util.Log.i("NodeForegroundService", "ADB Bridge started: $url")
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error starting ADB Bridge: ${e.message}")
+    }
+  }
+
+  private fun initVoiceCallManager() {
+    try {
+      voiceCallManager = VoiceCallManager(context = this)
+      android.util.Log.i("NodeForegroundService", "Voice Call Manager initialized")
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error initializing Voice Call Manager: ${e.message}")
+    }
+  }
+
+  private fun startSystemMonitor() {
+    try {
+      systemMonitor = SystemMonitorServer(context = this, port = 8892)
+      systemMonitor?.start()
+      val url = systemMonitor?.getUri()
+      android.util.Log.i("NodeForegroundService", "System Monitor started: $url")
+    } catch (e: Exception) {
+      android.util.Log.e("NodeForegroundService", "Error starting System Monitor: ${e.message}")
     }
   }
 

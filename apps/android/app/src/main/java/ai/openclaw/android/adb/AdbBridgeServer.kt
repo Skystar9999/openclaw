@@ -1,39 +1,38 @@
 package ai.openclaw.android.adb
 
 import android.content.Context
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import fi.iki.elonen.NanoHTTPD
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
 /**
- * ADB Bridge Native - Control tabletă direct din aplicație
- * Expune API HTTP pentru comenzi ADB locale
+ * ADB Bridge Native - HTTP server pentru control tabletă
+ * Folosește NanoHTTPD pentru compatibilitate Android
  * 
  * Endpoint-uri:
- * - POST /adb/shell - Execută comenzi shell
- * - POST /adb/tap - Simulează tap pe ecran
- * - POST /adb/swipe - Simulează swipe
- * - POST /adb/text - Scrie text
- * - GET /adb/screen - Info ecran (dimensiuni, rotație)
- * - POST /adb/key - Simulează apăsare tastă
+ * - GET  /adb/status      - Status serviciu
+ * - POST /adb/shell       - Execută comandă shell
+ * - POST /adb/tap         - Tap la coordonate
+ * - POST /adb/swipe       - Swipe între coordonate  
+ * - POST /adb/text        - Scrie text
+ * - POST /adb/key         - Apasă tastă
+ * - GET  /adb/screen      - Info ecran
  * 
  * Port: 8890
  */
 class AdbBridgeServer(
     private val context: Context,
     private val port: Int = 8890
-) {
+) : NanoHTTPD(port) {
+    
     private val json = Json { prettyPrint = true }
-    private val scope = CoroutineScope(Dispatchers.IO)
     
     @Serializable
     data class ShellCommandRequest(
-        val command: String,
-        val args: List<String> = emptyList()
+        val command: String
     )
     
     @Serializable
@@ -46,49 +45,206 @@ class AdbBridgeServer(
     )
     
     @Serializable
-    data class TapRequest(
-        val x: Int,
-        val y: Int
-    )
+    data class TapRequest(val x: Int, val y: Int)
     
     @Serializable
     data class SwipeRequest(
-        val x1: Int,
-        val y1: Int,
-        val x2: Int,
-        val y2: Int,
+        val x1: Int, val y1: Int,
+        val x2: Int, val y2: Int,
         val duration: Int = 300
     )
     
     @Serializable
-    data class TextRequest(
-        val text: String
+    data class TextRequest(val text: String)
+    
+    @Serializable
+    data class KeyRequest(val keyCode: Int)
+    
+    @Serializable
+    data class ScreenInfo(
+        val width: Int,
+        val height: Int,
+        val density: Float,
+        val rotation: Int
     )
     
     @Serializable
-    data class KeyRequest(
-        val keyCode: Int
+    data class AdbStatus(
+        val status: String,
+        val port: Int,
+        val timestamp: Long = System.currentTimeMillis()
     )
     
-    /**
-     * Pornește serverul ADB Bridge
-     */
-    fun start(): Boolean {
-        // TODO: Implementare cu NanoHTTPD similar cu SmsGatewayServer
-        return true
+    override fun serve(session: IHTTPSession): Response {
+        val uri = session.uri
+        val method = session.method
+        
+        return try {
+            when {
+                uri == "/adb/status" && method == Method.GET ->
+                    handleStatus()
+                uri == "/adb/shell" && method == Method.POST ->
+                    handleShell(session)
+                uri == "/adb/tap" && method == Method.POST ->
+                    handleTap(session)
+                uri == "/adb/swipe" && method == Method.POST ->
+                    handleSwipe(session)
+                uri == "/adb/text" && method == Method.POST ->
+                    handleText(session)
+                uri == "/adb/key" && method == Method.POST ->
+                    handleKey(session)
+                uri == "/adb/screen" && method == Method.GET ->
+                    handleScreenInfo()
+                method == Method.OPTIONS ->
+                    handleOptions()
+                else ->
+                    newFixedLengthResponse(
+                        Response.Status.NOT_FOUND,
+                        MIME_PLAINTEXT,
+                        "{\"error\":\"Not Found\"}"
+                    )
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AdbBridge", "Error: ${e.message}")
+            newFixedLengthResponse(
+                Response.Status.INTERNAL_ERROR,
+                MIME_PLAINTEXT,
+                "{\"error\":\"${e.message}\"}"
+            )
+        }
     }
     
-    /**
-     * Oprește serverul
-     */
-    fun stop() {
-        // TODO: Cleanup
+    private fun handleStatus(): Response {
+        val status = AdbStatus(
+            status = if (isAlive) "running" else "stopped",
+            port = port
+        )
+        return newJsonResponse(status)
     }
     
-    /**
-     * Execută comandă shell (folosind Runtime.exec)
-     */
-    fun executeShell(command: String, args: List<String> = emptyList()): ShellCommandResponse {
+    private fun handleShell(session: IHTTPSession): Response {
+        return try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val body = bodyMap["postData"] ?: "{}"
+            
+            val request = json.decodeFromString<ShellCommandRequest>(body)
+            val result = executeShell(request.command)
+            
+            newJsonResponse(result)
+        } catch (e: Exception) {
+            newFixedLengthResponse(
+                Response.Status.BAD_REQUEST,
+                MIME_PLAINTEXT,
+                "{\"error\":\"${e.message}\"}"
+            )
+        }
+    }
+    
+    private fun handleTap(session: IHTTPSession): Response {
+        return try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val body = bodyMap["postData"] ?: "{}"
+            
+            val request = json.decodeFromString<TapRequest>(body)
+            val success = simulateTap(request.x, request.y)
+            
+            newJsonResponse(mapOf("success" to success, "x" to request.x, "y" to request.y))
+        } catch (e: Exception) {
+            newFixedLengthResponse(
+                Response.Status.BAD_REQUEST,
+                MIME_PLAINTEXT,
+                "{\"error\":\"${e.message}\"}"
+            )
+        }
+    }
+    
+    private fun handleSwipe(session: IHTTPSession): Response {
+        return try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val body = bodyMap["postData"] ?: "{}"
+            
+            val request = json.decodeFromString<SwipeRequest>(body)
+            val success = simulateSwipe(
+                request.x1, request.y1,
+                request.x2, request.y2,
+                request.duration
+            )
+            
+            newJsonResponse(mapOf("success" to success))
+        } catch (e: Exception) {
+            newFixedLengthResponse(
+                Response.Status.BAD_REQUEST,
+                MIME_PLAINTEXT,
+                "{\"error\":\"${e.message}\"}"
+            )
+        }
+    }
+    
+    private fun handleText(session: IHTTPSession): Response {
+        return try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val body = bodyMap["postData"] ?: "{}"
+            
+            val request = json.decodeFromString<TextRequest>(body)
+            val success = inputText(request.text)
+            
+            newJsonResponse(mapOf("success" to success, "text" to request.text))
+        } catch (e: Exception) {
+            newFixedLengthResponse(
+                Response.Status.BAD_REQUEST,
+                MIME_PLAINTEXT,
+                "{\"error\":\"${e.message}\"}"
+            )
+        }
+    }
+    
+    private fun handleKey(session: IHTTPSession): Response {
+        return try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val body = bodyMap["postData"] ?: "{}"
+            
+            val request = json.decodeFromString<KeyRequest>(body)
+            val success = pressKey(request.keyCode)
+            
+            newJsonResponse(mapOf("success" to success, "keyCode" to request.keyCode))
+        } catch (e: Exception) {
+            newFixedLengthResponse(
+                Response.Status.BAD_REQUEST,
+                MIME_PLAINTEXT,
+                "{\"error\":\"${e.message}\"}"
+            )
+        }
+    }
+    
+    private fun handleScreenInfo(): Response {
+        val display = context.resources.displayMetrics
+        val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager
+        val rotation = windowManager.defaultDisplay.rotation
+        
+        val info = ScreenInfo(
+            width = display.widthPixels,
+            height = display.heightPixels,
+            density = display.density,
+            rotation = rotation
+        )
+        
+        return newJsonResponse(info)
+    }
+    
+    private fun handleOptions(): Response {
+        val response = newFixedLengthResponse(Response.Status.NO_CONTENT, "", "")
+        response.addHeader("Access-Control-Allow-Origin", "*")
+        response.addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        response.addHeader("Access-Control-Allow-Headers", "Content-Type")
+        return response
+    }
+    
+    private fun executeShell(command: String): ShellCommandResponse {
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
             
@@ -113,10 +269,7 @@ class AdbBridgeServer(
         }
     }
     
-    /**
-     * Simulează tap folosind input comandă
-     */
-    fun simulateTap(x: Int, y: Int): Boolean {
+    private fun simulateTap(x: Int, y: Int): Boolean {
         return try {
             Runtime.getRuntime().exec("input tap $x $y").waitFor() == 0
         } catch (e: Exception) {
@@ -124,10 +277,7 @@ class AdbBridgeServer(
         }
     }
     
-    /**
-     * Simulează swipe
-     */
-    fun simulateSwipe(x1: Int, y1: Int, x2: Int, y2: Int, duration: Int = 300): Boolean {
+    private fun simulateSwipe(x1: Int, y1: Int, x2: Int, y2: Int, duration: Int): Boolean {
         return try {
             Runtime.getRuntime().exec("input swipe $x1 $y1 $x2 $y2 $duration").waitFor() == 0
         } catch (e: Exception) {
@@ -135,12 +285,8 @@ class AdbBridgeServer(
         }
     }
     
-    /**
-     * Scrie text
-     */
-    fun inputText(text: String): Boolean {
+    private fun inputText(text: String): Boolean {
         return try {
-            // Escape special characters
             val escaped = text.replace("\"", "\\\"").replace("'", "\\'")
             Runtime.getRuntime().exec("input text \"$escaped\"").waitFor() == 0
         } catch (e: Exception) {
@@ -148,10 +294,7 @@ class AdbBridgeServer(
         }
     }
     
-    /**
-     * Apasă tastă (keycode Android)
-     */
-    fun pressKey(keyCode: Int): Boolean {
+    private fun pressKey(keyCode: Int): Boolean {
         return try {
             Runtime.getRuntime().exec("input keyevent $keyCode").waitFor() == 0
         } catch (e: Exception) {
@@ -159,16 +302,16 @@ class AdbBridgeServer(
         }
     }
     
-    /**
-     * Keycodes utile:
-     * 3 - Home
-     * 4 - Back
-     * 24 - Volume Up
-     * 25 - Volume Down
-     * 26 - Power
-     * 66 - Enter
-     * 82 - Menu
-     */
+    private fun newJsonResponse(data: Any): Response {
+        val jsonString = when (data) {
+            is String -> data
+            else -> json.encodeToString(data)
+        }
+        val response = newFixedLengthResponse(Response.Status.OK, "application/json", jsonString)
+        response.addHeader("Access-Control-Allow-Origin", "*")
+        return response
+    }
+    
     companion object {
         const val KEY_HOME = 3
         const val KEY_BACK = 4
