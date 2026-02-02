@@ -48,15 +48,18 @@ class NodeForegroundService : Service() {
     val initial = buildNotification(title = "OpenClaw Node", text = "Starting…")
     startForegroundWithTypes(notification = initial, requiresMic = false)
 
-    // Start all services
-    startSmsGateway()
-    startAdbBridge()
-    startSystemMonitor()
-    initVoiceCallManager()
-    startCameraServer()
-    startFileManager()
-    startHomeAssistantBridge()
-    startAutomationEngine()
+    // Start all services on background thread
+    scope.launch(Dispatchers.IO) {
+      startSmsGateway()
+      startAdbBridge()
+      startSystemMonitor()
+      initVoiceCallManager()
+      // Camera needs main thread for initialization
+      startCameraServer()
+      startFileManager()
+      startHomeAssistantBridge()
+      startAutomationEngine()
+    }
 
     val runtime = (application as NodeApp).runtime
     notificationJob =
