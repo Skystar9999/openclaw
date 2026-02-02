@@ -100,7 +100,9 @@ class NodeForegroundService : Service() {
       )
       val started = smsGateway?.start() ?: false
       if (started) {
-        android.util.Log.i("NodeForegroundService", "SMS Gateway started on port 8888")
+        val httpUrl = smsGateway?.getUrl()
+        val wsUrl = smsGateway?.getWebSocketUrl()
+        android.util.Log.i("NodeForegroundService", "SMS Gateway started: HTTP=$httpUrl, WS=$wsUrl")
       } else {
         android.util.Log.e("NodeForegroundService", "Failed to start SMS Gateway")
       }

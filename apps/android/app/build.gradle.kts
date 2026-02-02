@@ -117,6 +117,9 @@ dependencies {
 
   // Unicast DNS-SD (Wide-Area Bonjour) for tailnet discovery domains.
   implementation("dnsjava:dnsjava:3.6.4")
+  
+  // WebSocket server for real-time SMS notifications
+  implementation("org.java-websocket:Java-WebSocket:1.5.6")
 
   testImplementation("junit:junit:4.13.2")
   testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
