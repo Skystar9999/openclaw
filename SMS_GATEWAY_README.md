@@ -1,14 +1,24 @@
-# SMS Gateway API - OpenClaw Android Fork
+# SMS Gateway API v2.0 - Documentație Completă
 
 ## 🚀 Overview
 
-Această fork adaugă un **SMS Gateway HTTP server** în aplicația OpenClaw Android, permițând trimiterea de SMS-uri prin SIM-ul tabletei/SM-T295 via API HTTP.
+SMS Gateway complet integrat în OpenClaw Android cu suport pentru:
+- ✅ Trimitere SMS via HTTP API
+- ✅ Citire inbox SMS
+- ✅ Notificări WebSocket în timp real
+- ✅ Dashboard UI nativ în aplicație
+- ✅ Management SMS (mark read, delete)
 
-## 📱 Endpoints
+## 📡 Endpoints HTTP
+
+### Base URL
+```
+http://<tablet-ip>:8888
+```
 
 ### 1. Status Gateway
 ```http
-GET http://<tablet-ip>:8888/sms/status
+GET /sms/status
 ```
 
 **Response:**
@@ -16,15 +26,67 @@ GET http://<tablet-ip>:8888/sms/status
 {
   "status": "running",
   "port": 8888,
+  "webSocketPort": 8889,
   "smsEnabled": true,
   "hasPermission": true,
+  "hasReadPermission": true,
   "timestamp": 1738525200000
 }
 ```
 
-### 2. Trimite SMS
+### 2. Listă Inbox
 ```http
-POST http://<tablet-ip>:8888/sms/send
+GET /sms/inbox?limit=20&unread=false&from=+4077
+```
+
+**Query Parameters:**
+- `limit` (int, optional) - Număr maxim mesaje (default: 50)
+- `unread` (bool, optional) - Doar necitite (default: false)
+- `from` (string, optional) - Filtru după număr expeditor
+
+**Response:**
+```json
+{
+  "messages": [
+    {
+      "id": "123",
+      "threadId": "456",
+      "address": "+40773746621",
+      "body": "Salut!",
+      "date": 1738525200000,
+      "dateFormatted": "2025-02-02 20:00:00",
+      "read": false,
+      "type": "inbox"
+    }
+  ],
+  "totalCount": 150,
+  "unreadCount": 3,
+  "timestamp": 1738525200000
+}
+```
+
+### 3. Citește SMS Specific
+```http
+GET /sms/inbox/{id}
+```
+
+**Response:**
+```json
+{
+  "id": "123",
+  "threadId": "456",
+  "address": "+40773746621",
+  "body": "Salut!",
+  "date": 1738525200000,
+  "dateFormatted": "2025-02-02 20:00:00",
+  "read": false,
+  "type": "inbox"
+}
+```
+
+### 4. Trimite SMS
+```http
+POST /sms/send
 Content-Type: application/json
 X-API-Key: your-api-key
 
@@ -43,87 +105,248 @@ X-API-Key: your-api-key
 }
 ```
 
-## 🔧 Setup
-
-### 1. Build APK
-```bash
-cd apps/android
-./gradlew :app:assembleDebug
+### 5. Marchează ca Citit
+```http
+POST /sms/inbox/{id}/read
+X-API-Key: your-api-key
 ```
 
-### 2. Configurează API Key (Opțional)
-```bash
-export SMS_GATEWAY_API_KEY="cheia-ta-secreta"
-./gradlew :app:assembleDebug
+**Response:**
+```json
+{
+  "success": true,
+  "id": "123"
+}
 ```
 
-### 3. Instalează pe tabletă
-```bash
-adb install app/build/outputs/apk/debug/openclaw-2026.2.1-debug.apk
+### 6. Șterge SMS
+```http
+DELETE /sms/inbox/{id}
+X-API-Key: your-api-key
 ```
 
-### 4. Pornește OpenClaw Node
-- Deschide aplicația
-- Conectează-te la Gateway (Mac Mini)
-- SMS Gateway pornește automat pe port 8888
-
-### 5. Verifică funcționarea
-```bash
-curl http://192.168.100.103:8888/sms/status
+**Response:**
+```json
+{
+  "success": true,
+  "id": "123",
+  "deleted": true
+}
 ```
 
-## 📋 Permisiuni necesare
+## 🔌 WebSocket API
 
-Aplicația necesită:
-- `SEND_SMS` - pentru trimitere SMS
-- `READ_PHONE_STATE` - pentru verificare SIM
-- `INTERNET` - pentru HTTP server (deja existent)
+### Conectare
+```javascript
+const ws = new WebSocket('ws://<tablet-ip>:8889');
+
+ws.onopen = () => {
+  console.log('Conectat la SMS Gateway');
+};
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Eveniment:', data);
+};
+```
+
+### Evenimente
+
+#### 1. SMS Primit
+```json
+{
+  "type": "sms:received",
+  "data": {
+    "id": "123",
+    "from": "+40773746621",
+    "body": "Mesaj nou!",
+    "timestamp": "1738525200000"
+  },
+  "timestamp": 1738525200000
+}
+```
+
+#### 2. SMS Trimis
+```json
+{
+  "type": "sms:sent",
+  "data": {
+    "to": "+40773746621",
+    "body": "Mesaj trimis!",
+    "success": "true",
+    "timestamp": "1738525200000"
+  },
+  "timestamp": 1738525200000
+}
+```
+
+#### 3. Status Gateway
+```json
+{
+  "type": "sms:status",
+  "data": {
+    "connected": "true",
+    "clients": "3"
+  },
+  "timestamp": 1738525200000
+}
+```
+
+## 🎨 Dashboard UI
+
+### Accesare
+Dashboard-ul este disponibil în aplicația OpenClaw Android:
+- Navigare în aplicație → SMS Dashboard
+- Afișează inbox, status și butoane acțiuni
+
+### Funcționalități
+- 📥 Vizualizare mesaje primite (cu badge "Nou" pentru necitite)
+- 📤 Trimitere SMS (dialog dedicat)
+- ✓ Marcare mesaje ca citite
+- 🗑️ Ștergere mesaje
+- 🔄 Reîmprospătare inbox
+- 📊 Status gateway în timp real
 
 ## 🔒 Securitate
 
-- **API Key** în header `X-API-Key` pentru autentificare
-- CORS activat pentru acces web
-- Port 8888 deschis doar în LAN (nu expune la internet!)
+### Autentificare
+Toate endpoint-urile (except GET /sms/status) necesită header:
+```
+X-API-Key: your-api-key
+```
 
-## 🧪 Testare
-
+### Configurare API Key
 ```bash
-# Test status
+# La build
+export SMS_GATEWAY_API_KEY="cheia-ta-secreta"
+./gradlew :app:assembleDebug
+
+# Sau în cod (development only)
+val apiKey = "development-key-change-me"
+```
+
+### Rețea
+- **HTTP**: Port 8888 (LAN only)
+- **WebSocket**: Port 8889 (LAN only)
+- **CORS**: Activat pentru acces web
+
+## 📱 Permisiuni Android
+
+Adăugate în `AndroidManifest.xml`:
+```xml
+<uses-permission android:name="android.permission.SEND_SMS" />
+<uses-permission android:name="android.permission.READ_SMS" />
+<uses-permission android:name="android.permission.RECEIVE_SMS" />
+<uses-permission android:name="android.permission.READ_PHONE_STATE" />
+```
+
+## 🧪 Exemple Utilizare
+
+### Bash/cURL
+```bash
+# Status gateway
 curl http://192.168.100.103:8888/sms/status
 
-# Test trimite SMS (înlocuiește cu număr real)
+# Listă inbox (ultimele 10)
+curl "http://192.168.100.103:8888/sms/inbox?limit=10" \
+  -H "X-API-Key: dev-key-change-me"
+
+# Doar necitite
+curl "http://192.168.100.103:8888/sms/inbox?unread=true" \
+  -H "X-API-Key: dev-key-change-me"
+
+# Trimite SMS
 curl -X POST http://192.168.100.103:8888/sms/send \
   -H "Content-Type: application/json" \
   -H "X-API-Key: dev-key-change-me" \
-  -d '{"to":"+40773746621","message":"Test SMS Gateway 🦞"}'
+  -d '{"to":"+40773746621","message":"Test 🦞"}'
+
+# Marchează citit
+curl -X POST http://192.168.100.103:8888/sms/inbox/123/read \
+  -H "X-API-Key: dev-key-change-me"
+
+# Șterge mesaj
+curl -X DELETE http://192.168.100.103:8888/sms/inbox/123 \
+  -H "X-API-Key: dev-key-change-me"
 ```
 
-## 📂 Fișiere modificate/adăugate
+### Python
+```python
+import requests
+
+BASE_URL = "http://192.168.100.103:8888"
+API_KEY = "dev-key-change-me"
+headers = {"X-API-Key": API_KEY}
+
+# Trimite SMS
+response = requests.post(
+    f"{BASE_URL}/sms/send",
+    headers={**headers, "Content-Type": "application/json"},
+    json={"to": "+40773746621", "message": "Salut!"}
+)
+print(response.json())
+
+# Citește inbox
+inbox = requests.get(f"{BASE_URL}/sms/inbox", headers=headers).json()
+for msg in inbox["messages"]:
+    print(f"{msg['address']}: {msg['body']}")
+```
+
+### JavaScript WebSocket
+```javascript
+const ws = new WebSocket('ws://192.168.100.103:8889');
+
+ws.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  
+  if (msg.type === 'sms:received') {
+    console.log('SMS nou de la:', msg.data.from);
+    console.log('Conținut:', msg.data.body);
+    // Afișează notificare în UI
+  }
+};
+```
+
+## 📂 Structura Fișierelor
 
 ```
-apps/android/
-├── app/src/main/java/ai/openclaw/android/sms/
-│   └── SmsGatewayServer.kt          # NOU - HTTP server SMS
-├── app/src/main/java/ai/openclaw/android/
-│   └── NodeForegroundService.kt     # MODIFICAT - integrare SMS Gateway
-└── app/build.gradle.kts             # MODIFICAT - API Key build config
+apps/android/app/src/main/java/ai/openclaw/android/
+├── sms/
+│   ├── SmsGatewayServer.kt      # HTTP API server
+│   ├── SmsInboxReader.kt        # Inbox operations
+│   └── SmsWebSocketServer.kt    # WebSocket notifications
+├── ui/sms/
+│   └── SmsDashboard.kt          # Jetpack Compose UI
+└── NodeForegroundService.kt     # Integration
 ```
 
-## 🔄 Sync cu upstream
+## 🔄 Sync cu Upstream
 
 ```bash
+# Fetch upstream changes
 git fetch upstream
+
+# Rebase your changes
 git rebase upstream/main
-# Rezolvă conflicte dacă apar
+
+# Force push (if needed)
 git push origin main --force-with-lease
 ```
 
-## 📝 TODO / Feature-uri viitoare
+## 📝 Changelog
 
-- [ ] Endpoint `/sms/inbox` - citire SMS primite
-- [ ] WebSocket pentru notificări SMS în timp real
-- [ ] ADB bridge nativ în app
-- [ ] Dashboard UI pentru management SMS
+### v2.0 (2026-02-02)
+- ✨ SmsInboxReader - Citire inbox completă
+- ✨ SmsWebSocketServer - Notificări real-time
+- ✨ SmsDashboard UI - Interfață nativă
+- ✨ Endpoint-uri management SMS
+- ✨ Filtrare inbox (unread, from, limit)
+
+### v1.0 (2026-02-02)
+- ✨ SmsGatewayServer - Trimitere SMS via HTTP
+- ✨ API Key authentication
+- ✨ CORS enabled
 
 ---
-*Fork creat pentru Adrian S. - Aghiuță Assistant 🦞*
+
+*Dezvoltat pentru Adrian S. - Aghiuță Assistant 🦞*
