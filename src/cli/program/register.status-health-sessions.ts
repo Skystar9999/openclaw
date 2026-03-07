@@ -9,6 +9,9 @@ import { theme } from "../../terminal/theme.js";
 import { runCommandWithRuntime } from "../cli-utils.js";
 import { formatHelpExamples } from "../help-format.js";
 import { parsePositiveIntOrUndefined } from "./helpers.js";
+import { createConsolidateCommand } from "../../cli/sessions/consolidate.js";
+import { createLookupCommand } from "../../cli/sessions/lookup.js";
+import { createIndexCommand } from "../../cli/sessions/index.js";
 
 function resolveVerbose(opts: { verbose?: boolean; debug?: boolean }): boolean {
   return Boolean(opts.verbose || opts.debug);
@@ -108,9 +111,9 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       });
     });
 
-  program
+  const sessionsCmd = program
     .command("sessions")
-    .description("List stored conversation sessions")
+    .description("List and manage stored conversation sessions")
     .option("--json", "Output as JSON", false)
     .option("--verbose", "Verbose logging", false)
     .option("--store <path>", "Path to session store (default: resolved from config)")
@@ -123,6 +126,9 @@ export function registerStatusHealthSessionsCommands(program: Command) {
           ["openclaw sessions --active 120", "Only last 2 hours."],
           ["openclaw sessions --json", "Machine-readable output."],
           ["openclaw sessions --store ./tmp/sessions.json", "Use a specific session store."],
+          ["openclaw sessions lookup --chat-id telegram:123", "Lookup session by chat_id."],
+          ["openclaw sessions consolidate --chat-id telegram:123", "Consolidate sessions."],
+          ["openclaw sessions index --rebuild", "Rebuild session index."],
         ])}\n\n${theme.muted(
           "Shows token usage per session when the agent reports it; set agents.defaults.contextTokens to cap the window and show %.",
         )}`,
@@ -143,4 +149,9 @@ export function registerStatusHealthSessionsCommands(program: Command) {
         defaultRuntime,
       );
     });
+
+  // Register sub-commands for session persistence
+  createConsolidateCommand(sessionsCmd);
+  createLookupCommand(sessionsCmd);
+  createIndexCommand(sessionsCmd);
 }

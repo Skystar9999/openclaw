@@ -15,6 +15,27 @@ const SessionResetConfigSchema = z
   })
   .strict();
 
+const SessionPersistenceContextRestoreSchema = z
+  .object({
+    enabled: z.boolean().optional().default(true),
+    ragSearch: z.boolean().optional().default(true),
+    memoryLines: z.number().int().positive().optional().default(100),
+    checkpointRestore: z.boolean().optional().default(true),
+  })
+  .strict()
+  .optional();
+
+const SessionPersistenceSchema = z
+  .object({
+    enabled: z.boolean().optional().default(false),
+    indexPath: z.string().optional().default("./session_index.json"),
+    autoConsolidate: z.boolean().optional().default(false),
+    consolidateThreshold: z.number().int().positive().optional().default(10),
+    contextRestore: SessionPersistenceContextRestoreSchema,
+  })
+  .strict()
+  .optional();
+
 export const SessionSchema = z
   .object({
     scope: z.union([z.literal("per-sender"), z.literal("global")]).optional(),
@@ -81,6 +102,7 @@ export const SessionSchema = z
       })
       .strict()
       .optional(),
+    persistence: SessionPersistenceSchema,
   })
   .strict()
   .optional();
